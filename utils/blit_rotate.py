@@ -5,5 +5,4 @@ def blit_rotate(surf, image, pos, angle):
     new_rect = rotated_image.get_rect(center = image.get_rect(topleft = pos).center)
 
     # Render
-    print(new_rect.topleft)
     surf.blit(rotated_image, new_rect.topleft)

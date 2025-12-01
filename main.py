@@ -30,25 +30,26 @@ holistic = mp_holistic.Holistic(
     model_complexity=0)
 
 pygame.init()
-WINDOW_SIZE = (400, 400)
+WINDOW_SIZE = (500, 500)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 pygame.display.set_caption("VTuber")
 font = pygame.font.SysFont("Arial", 24)
-AVATAR_SIZE = (300, 300)
+AVATAR_SIZE = (1600, 700)
 
 # --- LOAD ASET ---
 assets = {}
 background_img = None 
 try:
     bg_raw = pygame.image.load("assets/bg.jpg") 
-    background_img = pygame.transform.scale(bg_raw, (400, 400))
-    assets["IDLE"] = pygame.transform.scale(pygame.image.load("assets/idle.png"), AVATAR_SIZE)
-    assets["A"]    = pygame.transform.scale(pygame.image.load("assets/a.png"), AVATAR_SIZE)
-    assets["I"]    = pygame.transform.scale(pygame.image.load("assets/e.png"), AVATAR_SIZE) # I and E
-    assets["U"]    = pygame.transform.scale(pygame.image.load("assets/u.png"), AVATAR_SIZE) # U and O
-    assets["BLINK"] = pygame.transform.scale(pygame.image.load("assets/blink.png"), AVATAR_SIZE)
-    assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load("assets/blink_right.png"), AVATAR_SIZE)
-    assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load("assets/blink_left.png"), AVATAR_SIZE)
+    background_img = pygame.transform.scale(bg_raw, WINDOW_SIZE)
+    assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load("assets/v2/v2_idle.png"), AVATAR_SIZE)
+    assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_idle.png"), AVATAR_SIZE)
+    assets["A"]    = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_a.png"), AVATAR_SIZE)
+    assets["I"]    = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_e.png"), AVATAR_SIZE) # I and E
+    assets["U"]    = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_u.png"), AVATAR_SIZE) # U and O
+    assets["BLINK"] = pygame.transform.scale(pygame.image.load("assets/v2/v2_blink.png"), AVATAR_SIZE)
+    assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load("assets/v2/wink_right.png"), AVATAR_SIZE)
+    assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load("assets/v2/wink_left.png"), AVATAR_SIZE)
 except Exception as e:
     print("Error:", e)
     print("make sure the assets are there")
@@ -68,27 +69,28 @@ while running:
     ret, frame = cap.read()
     if not ret: break
     
-    # frame = cv2.flip(frame, 1) 
+    frame = cv2.flip(frame, 1) 
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = holistic.process(image)
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     
     # Draw Landmark
-    mp_drawing.draw_landmarks(
-        image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
-        mp_drawing.DrawingSpec(color=(80,110,10), thickness=1, circle_radius=1),
-        mp_drawing.DrawingSpec(color=(80,256,121), thickness=1, circle_radius=1)
-    )
-    mp_drawing.draw_landmarks(
-        image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
-    mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
-    mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
-    cv2.imshow('VTuber Tracking Landmark', image)
-    if cv2.waitKey(10) & 0xFF == ord('q'):
-        break
+    # mp_drawing.draw_landmarks(
+    #     image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
+    #     mp_drawing.DrawingSpec(color=(80,110,10), thickness=1, circle_radius=1),
+    #     mp_drawing.DrawingSpec(color=(80,256,121), thickness=1, circle_radius=1)
+    # )
+    # mp_drawing.draw_landmarks(
+    #     image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+    # mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+    # mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+    # cv2.imshow('VTuber Tracking Landmark', image)
+    # if cv2.waitKey(10) & 0xFF == ord('q'):
+    #     break
 
-    current_img = assets["IDLE"]
-    target_x, target_y = 100, 100 # Default Position
+    current_img = assets["IDLE EYES"]
+    cureent_mout = assets["IDLE MOUTH"]
+    target_x, target_y = -400, -100 # Default Position
     target_angle = 0
     
     if results.pose_landmarks:
@@ -103,8 +105,8 @@ while running:
         center_x = (nose.x - 0.5) * 300 * MOVEMENT_SENSITIVITY # x H
         center_y = (nose.y - 0.5) * 300 * MOVEMENT_SENSITIVITY # x W
         
-        target_x = center_x + 100
-        target_y = center_y + 100
+        target_x = center_x - 500
+        target_y = center_y - 100
     
     if results.face_landmarks:
         # Sama seperti kode sebelumnya, logika deteksi mulut & mata
@@ -126,13 +128,15 @@ while running:
             current_img = assets["LEFT WINK"]
         elif right_eye < EYE_CLOSE_THRESH:
             current_img = assets["RIGHT WINK"]
+        else :
+            current_img = assets["IDLE EYES"]
 
         if mouth_h > HEIGHT_BIG_THRESH:
-            current_img = assets["A"]
+            current_mouth = assets["A"]
         elif mouth_h > HEIGHT_OPEN_THRESH:
-             current_img = assets["U"] if ratio > RATIO_ROUND_THRESH else assets["I"]
+             current_mouth = assets["U"] if ratio > RATIO_ROUND_THRESH else assets["I"]
         else:
-            current_img = assets["IDLE"]
+            current_mouth = assets["IDLE MOUTH"]
 
     # For smooth movement of the body
     smooth_x += (target_x - smooth_x) * 0.2
@@ -145,12 +149,7 @@ while running:
     
     # Show image based on the state
     blit_rotate(screen, current_img, (smooth_x, smooth_y), smooth_angle)
-    # if state in assets:
-    #     screen.blit(assets[state], (50, 50))
-    # screen.blit(current_img, (50, 50))
-    
-    # --- DEBUG TEXT ---
-    screen.blit(font.render(f"Angle: {smooth_angle:.1f}", True, (0,0,0)), (10, 10))
+    blit_rotate(screen, current_mouth, (smooth_x, smooth_y), smooth_angle)
     
     pygame.display.flip()
     clock.tick(30)
