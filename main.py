@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import pygame
 import numpy as np
+import math
 import utils.get_dist as get_dist
 import utils.get_body_rotation as get_body_rotation
 import utils.blit_rotate as blit_rotate
@@ -13,14 +14,10 @@ HEIGHT_BIG_THRESH  = 0.05 # for mouth
 RATIO_ROUND_THRESH = 0.15 # for mouth
 EYE_CLOSE_THRESH = 0.012
 MOVEMENT_SENSITIVITY = 1.0
+HAND_SENSITIVITY = 1.8
+DISTANCE_THRESH = 300
 
 # --- INIT SYSTEM ---
-mp_face_mesh = mp.solutions.face_mesh
-face_mesh = mp_face_mesh.FaceMesh(
-    refine_landmarks=True,
-    min_detection_confidence=0.5,
-    min_tracking_confidence=0.5)
-
 mp_drawing = mp.solutions.drawing_utils
 mp_holistic = mp.solutions.holistic
 holistic = mp_holistic.Holistic(
@@ -34,15 +31,15 @@ WINDOW_SIZE = (500, 500)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 pygame.display.set_caption("VTuber")
 font = pygame.font.SysFont("Arial", 24)
-AVATAR_SIZE = (1200, 1200)
-OFFSET = (-300,-200)
+AVATAR_SIZE = (900, 900)
+OFFSET = (-150,-150)
+HAND_SIZE = (100, 100)
 
 # --- LOAD ASET ---
 assets = {}
 background_img = None 
 try:
-    bg_raw = pygame.image.load("assets/bg.jpg") 
-    background_img = pygame.transform.scale(bg_raw, WINDOW_SIZE)
+    background_img = pygame.transform.scale(pygame.image.load("assets/bg.jpg") , WINDOW_SIZE)
     assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_idle.png"), AVATAR_SIZE)
     assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_idle.png"), AVATAR_SIZE)
     assets["A"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_a.png"), AVATAR_SIZE)
@@ -51,6 +48,8 @@ try:
     assets["BLINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_blink.png"), AVATAR_SIZE)
     assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_wink_right.png"), AVATAR_SIZE)
     assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_wink_left.png"), AVATAR_SIZE)
+    assets["WAVE1"] = pygame.transform.scale(pygame.image.load("assets/v3/wave1.png"), AVATAR_SIZE)
+    assets["WAVE2"] = pygame.transform.scale(pygame.image.load("assets/v3/wave2.png"), AVATAR_SIZE)
 except Exception as e:
     print("Error:", e)
     print("make sure the assets are there")
@@ -62,6 +61,9 @@ clock = pygame.time.Clock()
 running = True
 
 smooth_x, smooth_y, smooth_angle = 250, 250, 0
+smooth_rh_x, smooth_rh_y = 300, 300
+# smooth_lh_x, smooth_lh_y = 100, 300
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -76,23 +78,27 @@ while running:
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     
     # Draw Landmark
-    # mp_drawing.draw_landmarks(
-    #     image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
-    #     mp_drawing.DrawingSpec(color=(80,110,10), thickness=1, circle_radius=1),
-    #     mp_drawing.DrawingSpec(color=(80,256,121), thickness=1, circle_radius=1)
-    # )
-    # mp_drawing.draw_landmarks(
-    #     image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
-    # mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
-    # mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
-    # cv2.imshow('VTuber Tracking Landmark', image)
-    # if cv2.waitKey(10) & 0xFF == ord('q'):
-    #     break
+    mp_drawing.draw_landmarks(
+        image, results.face_landmarks, mp_holistic.FACEMESH_TESSELATION,
+        mp_drawing.DrawingSpec(color=(80,110,10), thickness=1, circle_radius=1),
+        mp_drawing.DrawingSpec(color=(80,256,121), thickness=1, circle_radius=1)
+    )
+    mp_drawing.draw_landmarks(
+        image, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+    mp_drawing.draw_landmarks(image, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+    mp_drawing.draw_landmarks(image, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+    cv2.imshow('VTuber Tracking Landmark', image)
+    if cv2.waitKey(10) & 0xFF == ord('q'):
+        break
 
     current_img = assets["IDLE EYES"]
-    cureent_mouth = assets["IDLE MOUTH"]
+    current_mouth = assets["IDLE MOUTH"]
+    current_body = assets["IDLE EYES"]
     target_x, target_y = OFFSET[0], OFFSET[1] # Default Position
     target_angle = 0
+
+    target_rh_x, target_rh_y = target_x + 200, target_y + 200 
+    target_lh_x, target_lh_y = target_x - 50, target_y + 200
     
     if results.pose_landmarks:
         landmarks = results.pose_landmarks.landmark
@@ -101,6 +107,9 @@ while running:
         sh_left = landmarks[11]
         sh_right = landmarks[12]
         target_angle = get_body_rotation(sh_left, sh_right)
+
+        screen_sh_x = (sh_right.x - 0.5) * WINDOW_SIZE[0] * MOVEMENT_SENSITIVITY + 100
+        screen_sh_y = (sh_right.y - 0.5) * WINDOW_SIZE[1] * MOVEMENT_SENSITIVITY + 100
 
         nose = landmarks[0]
         center_x = (nose.x - 0.5) * WINDOW_SIZE[0] * MOVEMENT_SENSITIVITY # x H
@@ -139,6 +148,25 @@ while running:
         else:
             current_mouth = assets["IDLE MOUTH"]
 
+    dist_to_body = 0
+    if results.left_hand_landmarks:
+        # Landmark 0 = WRIST
+        rh_wrist = results.left_hand_landmarks.landmark[0]
+
+        target_rh_x = (rh_wrist.x - 0.5) * WINDOW_SIZE[0] * HAND_SENSITIVITY + 100
+        target_rh_y = (rh_wrist.y - 0.5) * WINDOW_SIZE[1] * HAND_SENSITIVITY + 100
+        dist_to_shoulder = math.sqrt((target_rh_x - screen_sh_x)**2 + (target_rh_y - screen_sh_y)**2)
+
+        if dist_to_shoulder < DISTANCE_THRESH : 
+            current_body = assets["WAVE1"]
+        else :
+            current_body = assets["WAVE2"]
+    else:
+        #if the hands are not detected
+        current_body = assets["IDLE EYES"]
+        target_rh_x = smooth_x + 180
+        target_rh_y = smooth_y + 150
+
     # For smooth movement of the body
     smooth_x += (target_x - smooth_x) * 0.2
     smooth_y += (target_y - smooth_y) * 0.2
@@ -151,6 +179,7 @@ while running:
     # Show image based on the state
     blit_rotate(screen, current_img, (smooth_x, smooth_y), smooth_angle)
     blit_rotate(screen, current_mouth, (smooth_x, smooth_y), smooth_angle)
+    blit_rotate(screen, current_body, (smooth_x, smooth_y), smooth_angle)
     
     pygame.display.flip()
     clock.tick(30)
