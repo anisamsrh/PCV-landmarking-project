@@ -12,7 +12,7 @@ HEIGHT_OPEN_THRESH = 0.001  # for mouth
 HEIGHT_BIG_THRESH  = 0.05 # for mouth
 RATIO_ROUND_THRESH = 0.15 # for mouth
 EYE_CLOSE_THRESH = 0.012
-MOVEMENT_SENSITIVITY = 1.5
+MOVEMENT_SENSITIVITY = 1.0
 
 # --- INIT SYSTEM ---
 mp_face_mesh = mp.solutions.face_mesh
@@ -34,7 +34,8 @@ WINDOW_SIZE = (500, 500)
 screen = pygame.display.set_mode(WINDOW_SIZE)
 pygame.display.set_caption("VTuber")
 font = pygame.font.SysFont("Arial", 24)
-AVATAR_SIZE = (1600, 700)
+AVATAR_SIZE = (1200, 1200)
+OFFSET = (-300,-200)
 
 # --- LOAD ASET ---
 assets = {}
@@ -42,14 +43,14 @@ background_img = None
 try:
     bg_raw = pygame.image.load("assets/bg.jpg") 
     background_img = pygame.transform.scale(bg_raw, WINDOW_SIZE)
-    assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load("assets/v2/v2_idle.png"), AVATAR_SIZE)
-    assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_idle.png"), AVATAR_SIZE)
-    assets["A"]    = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_a.png"), AVATAR_SIZE)
-    assets["I"]    = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_e.png"), AVATAR_SIZE) # I and E
-    assets["U"]    = pygame.transform.scale(pygame.image.load("assets/v2/v2_mouth_u.png"), AVATAR_SIZE) # U and O
-    assets["BLINK"] = pygame.transform.scale(pygame.image.load("assets/v2/v2_blink.png"), AVATAR_SIZE)
-    assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load("assets/v2/wink_right.png"), AVATAR_SIZE)
-    assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load("assets/v2/wink_left.png"), AVATAR_SIZE)
+    assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_idle.png"), AVATAR_SIZE)
+    assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_idle.png"), AVATAR_SIZE)
+    assets["A"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_a.png"), AVATAR_SIZE)
+    assets["I"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_e.png"), AVATAR_SIZE) # I and E
+    assets["U"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_u.png"), AVATAR_SIZE) # U and O
+    assets["BLINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_blink.png"), AVATAR_SIZE)
+    assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_wink_right.png"), AVATAR_SIZE)
+    assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_wink_left.png"), AVATAR_SIZE)
 except Exception as e:
     print("Error:", e)
     print("make sure the assets are there")
@@ -89,8 +90,8 @@ while running:
     #     break
 
     current_img = assets["IDLE EYES"]
-    cureent_mout = assets["IDLE MOUTH"]
-    target_x, target_y = -400, -100 # Default Position
+    cureent_mouth = assets["IDLE MOUTH"]
+    target_x, target_y = OFFSET[0], OFFSET[1] # Default Position
     target_angle = 0
     
     if results.pose_landmarks:
@@ -102,11 +103,11 @@ while running:
         target_angle = get_body_rotation(sh_left, sh_right)
 
         nose = landmarks[0]
-        center_x = (nose.x - 0.5) * 300 * MOVEMENT_SENSITIVITY # x H
-        center_y = (nose.y - 0.5) * 300 * MOVEMENT_SENSITIVITY # x W
+        center_x = (nose.x - 0.5) * WINDOW_SIZE[0] * MOVEMENT_SENSITIVITY # x H
+        center_y = (nose.y - 0.5) * WINDOW_SIZE[1] * MOVEMENT_SENSITIVITY # x W
         
-        target_x = center_x - 500
-        target_y = center_y - 100
+        target_x = center_x + OFFSET[0]
+        target_y = center_y + OFFSET[1]
     
     if results.face_landmarks:
         # Sama seperti kode sebelumnya, logika deteksi mulut & mata
@@ -134,7 +135,7 @@ while running:
         if mouth_h > HEIGHT_BIG_THRESH:
             current_mouth = assets["A"]
         elif mouth_h > HEIGHT_OPEN_THRESH:
-             current_mouth = assets["U"] if ratio > RATIO_ROUND_THRESH else assets["I"]
+             current_mouth = assets["I"] if ratio > RATIO_ROUND_THRESH else assets["U"]
         else:
             current_mouth = assets["IDLE MOUTH"]
 
