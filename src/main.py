@@ -44,6 +44,7 @@ try:
     background_img = pygame.transform.scale(pygame.image.load(current_dir/"assets/bg.jpg") , WINDOW_SIZE)
     assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_idle.png"), AVATAR_SIZE)
     assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_idle.png"), AVATAR_SIZE)
+    assets["IDLE BODY"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_idle_body.png"), AVATAR_SIZE)
     assets["A"]    = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_a.png"), AVATAR_SIZE)
     assets["I"]    = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_e.png"), AVATAR_SIZE) # I and E
     assets["U"]    = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_u.png"), AVATAR_SIZE) # U and O
@@ -95,7 +96,7 @@ while running:
 
     current_img = assets["IDLE EYES"]
     current_mouth = assets["IDLE MOUTH"]
-    current_body = assets["IDLE EYES"]
+    current_body = assets["IDLE BODY"]
     target_x, target_y = OFFSET[0], OFFSET[1] # Default Position
     target_angle = 0
 
@@ -167,7 +168,7 @@ while running:
             current_body = assets["WAVE2"]
     else:
         #if the hands are not detected
-        current_body = assets["WAVE1"]
+        current_body = assets["IDLE BODY"]
         target_rh_x = smooth_x + 180
         target_rh_y = smooth_y + 150
 

@@ -39,6 +39,7 @@ pip install opencv-python mediapipe numpy
 ```
 3. Run the application
 ```sh
+cd PCV-landmarking-project
 python3 main.py
 ```
 if you want to only see the landmarking, run this instead
