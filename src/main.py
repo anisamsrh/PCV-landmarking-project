@@ -1,8 +1,9 @@
 import cv2
 import mediapipe as mp
 import pygame
-import numpy as np
+# import numpy as np
 import math
+from pathlib import Path
 import utils.get_dist as get_dist
 import utils.get_body_rotation as get_body_rotation
 import utils.blit_rotate as blit_rotate
@@ -38,18 +39,19 @@ HAND_SIZE = (100, 100)
 # --- LOAD ASET ---
 assets = {}
 background_img = None 
+current_dir = Path(__file__).parent
 try:
-    background_img = pygame.transform.scale(pygame.image.load("assets/bg.jpg") , WINDOW_SIZE)
-    assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_idle.png"), AVATAR_SIZE)
-    assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_idle.png"), AVATAR_SIZE)
-    assets["A"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_a.png"), AVATAR_SIZE)
-    assets["I"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_e.png"), AVATAR_SIZE) # I and E
-    assets["U"]    = pygame.transform.scale(pygame.image.load("assets/v3/v3_mouth_u.png"), AVATAR_SIZE) # U and O
-    assets["BLINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_blink.png"), AVATAR_SIZE)
-    assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_wink_right.png"), AVATAR_SIZE)
-    assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load("assets/v3/v3_wink_left.png"), AVATAR_SIZE)
-    assets["WAVE1"] = pygame.transform.scale(pygame.image.load("assets/v3/wave1.png"), AVATAR_SIZE)
-    assets["WAVE2"] = pygame.transform.scale(pygame.image.load("assets/v3/wave2.png"), AVATAR_SIZE)
+    background_img = pygame.transform.scale(pygame.image.load(current_dir/"assets/bg.jpg") , WINDOW_SIZE)
+    assets["IDLE EYES"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_idle.png"), AVATAR_SIZE)
+    assets["IDLE MOUTH"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_idle.png"), AVATAR_SIZE)
+    assets["A"]    = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_a.png"), AVATAR_SIZE)
+    assets["I"]    = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_e.png"), AVATAR_SIZE) # I and E
+    assets["U"]    = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_mouth_u.png"), AVATAR_SIZE) # U and O
+    assets["BLINK"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_blink.png"), AVATAR_SIZE)
+    assets["RIGHT WINK"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_wink_right.png"), AVATAR_SIZE)
+    assets["LEFT WINK"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/v3_wink_left.png"), AVATAR_SIZE)
+    assets["WAVE1"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/wave1.png"), AVATAR_SIZE)
+    assets["WAVE2"] = pygame.transform.scale(pygame.image.load(current_dir/"assets/v3/wave2.png"), AVATAR_SIZE)
 except Exception as e:
     print("Error:", e)
     print("make sure the assets are there")
@@ -100,6 +102,7 @@ while running:
     target_rh_x, target_rh_y = target_x + 200, target_y + 200 
     target_lh_x, target_lh_y = target_x - 50, target_y + 200
     
+    # for body fluid tracking
     if results.pose_landmarks:
         landmarks = results.pose_landmarks.landmark
         
@@ -118,6 +121,7 @@ while running:
         target_x = center_x + OFFSET[0]
         target_y = center_y + OFFSET[1]
     
+    # for face tracking
     if results.face_landmarks:
         # Sama seperti kode sebelumnya, logika deteksi mulut & mata
         landmarks = results.face_landmarks.landmark
@@ -163,7 +167,7 @@ while running:
             current_body = assets["WAVE2"]
     else:
         #if the hands are not detected
-        current_body = assets["IDLE EYES"]
+        current_body = assets["WAVE1"]
         target_rh_x = smooth_x + 180
         target_rh_y = smooth_y + 150
 
